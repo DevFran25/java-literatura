@@ -1,11 +1,10 @@
 package com.challenge.literatura.servicio;
 
 import com.challenge.literatura.cliente.GuntendexCliente;
-import com.challenge.literatura.dominio.modelo.Libro;
 import com.challenge.literatura.dominio.modelo.Autor;
+import com.challenge.literatura.dominio.modelo.Libro;
 import com.challenge.literatura.dominio.repositorio.AutorRepository;
 import com.challenge.literatura.dominio.repositorio.LibroRepository;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -29,64 +28,82 @@ public class BibliotecaService {
         this.autorRepository = autorRepository;
     }
 
+    /* ===================== MENÚ PRINCIPAL ===================== */
+
     public void menu() {
         Scanner scanner = new Scanner(System.in);
+        boolean continuar = true;
 
-        while (true) {
-            System.out.println("""
-                    
-                    1. Buscar libro por título
-                    2. Mostrar todos los libros
-                    3. Buscar libros por idioma
-                    4. Mostrar todos los autores
-                    5. Autores vivos en un año específico
-                    6. Salir
-                    """);
+        while (continuar) {
+            mostrarMenu();
+            Integer opcion = leerEntero(scanner);
 
-            System.out.print("Seleccione una opción: ");
-
-            if (!scanner.hasNextInt()) {
-                System.out.println("Entrada inválida.");
-                scanner.nextLine();
+            if (opcion == null) {
+                System.out.println("Opción inválida.");
                 continue;
             }
 
-            int opcion = scanner.nextInt();
-            scanner.nextLine();
+            OpcionMenu opcionMenu = OpcionMenu.fromCodigo(opcion);
 
-            try {
-                switch (opcion) {
-                    case 1 -> {
-                        System.out.print("Ingrese el título: ");
-                        buscarLibroPorTitulo(scanner.nextLine());
-                    }
-                    case 2 -> listarLibros();
-                    case 3 -> {
-                        System.out.print("Ingrese el idioma: ");
-                        listarLibrosPorIdioma(scanner.nextLine());
-                    }
-                    case 4 -> listarAutores();
-                    case 5 -> {
-                        System.out.print("Ingrese el año: ");
-                        if (scanner.hasNextInt()) {
-                            listarAutoresVivosEn(scanner.nextInt());
-                            scanner.nextLine();
-                        } else {
-                            System.out.println("Año inválido.");
-                            scanner.nextLine();
-                        }
-                    }
-                    case 6 -> {
-                        System.out.println("Finalizando programa.");
-                        return;
-                    }
-                    default -> System.out.println("Opción no válida.");
-                }
-            } catch (Exception e) {
-                System.out.println("Error: " + e.getMessage());
+            if (opcionMenu == null) {
+                System.out.println("Opción no válida.");
+                continue;
             }
+
+            continuar = ejecutarOpcion(opcionMenu, scanner);
         }
     }
+
+    private void mostrarMenu() {
+        System.out.println("\n========= BIBLIOTECA =========");
+        for (OpcionMenu opcion : OpcionMenu.values()) {
+            System.out.printf("%d. %s%n", opcion.getCodigo(), opcion.getDescripcion());
+        }
+        System.out.print("Seleccione una opción: ");
+    }
+
+    private boolean ejecutarOpcion(OpcionMenu opcion, Scanner scanner) {
+        try {
+            switch (opcion) {
+                case BUSCAR_LIBRO -> {
+                    System.out.print("Ingrese el título: ");
+                    buscarLibroPorTitulo(scanner.nextLine());
+                }
+                case LISTAR_LIBROS -> listarLibros();
+                case LISTAR_POR_IDIOMA -> {
+                    System.out.print("Ingrese el idioma: ");
+                    listarLibrosPorIdioma(scanner.nextLine());
+                }
+                case LISTAR_AUTORES -> listarAutores();
+                case AUTORES_VIVOS -> {
+                    System.out.print("Ingrese el año: ");
+                    Integer anio = leerEntero(scanner);
+                    if (anio != null) {
+                        listarAutoresVivosEn(anio);
+                    } else {
+                        System.out.println("Año inválido.");
+                    }
+                }
+                case SALIR -> {
+                    System.out.println("Finalizando programa.");
+                    return false;
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        return true;
+    }
+
+    private Integer leerEntero(Scanner scanner) {
+        try {
+            return Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /* ===================== LÓGICA DE NEGOCIO ===================== */
 
     @Transactional
     public void buscarLibroPorTitulo(String titulo) throws Exception {
